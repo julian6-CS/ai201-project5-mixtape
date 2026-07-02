@@ -2,9 +2,77 @@ from datetime import datetime, timedelta, timezone
 from app import create_app, db
 from models import User, Song, Tag, Playlist, ListeningEvent, Rating, Notification, song_tags, playlist_entries, friendships
 from services.streak_service import record_listening_event , get_streak , update_listening_streak
+from services.feed_service import get_friends_listening_now
 
 
 
+
+
+
+#Bug two replication
+def record_listening_event_for_Bug_Replication(user_id: str, song_id: str, time: datetime ) -> ListeningEvent:
+    """
+    Record that a user listened to a song and update their streak. Just copy pasted the code present in the streak_service.py with the added functionality of passing a time
+
+    Args:
+        user_id: The ID of the user who listened.
+        song_id: The ID of the song that was listened to.
+        time: The intended datetime mainly used to replicate the second bug
+
+    Returns:
+        The created ListeningEvent.
+    """
+    user = db.session.get(User, user_id)
+    if not user:
+        raise ValueError(f"User {user_id} not found")
+
+    now = time
+
+    # Create the listening event
+    event = ListeningEvent(user_id=user_id, song_id=song_id, listened_at=now)
+    db.session.add(event)
+
+    # Update the streak
+    update_listening_streak(user, now)
+
+    db.session.commit()
+    return event
+
+
+def testing_bug_two():
+    app = create_app()
+    with app.app_context():
+        listOfUSERIDS = []
+        songs = []
+
+        forty_hours_ago = datetime.now(timezone.utc) - timedelta(hours=48)
+        events = ListeningEvent.query.all()
+
+        for event in events:
+            event.listened_at = forty_hours_ago
+
+        for u in User.query.all():
+            u.last_listened_at = forty_hours_ago
+        db.session.commit() # Setting the datetime for both objects to a time 23 hours would suffice, but to reproduce the exact workflows done that the user would encounter I vied for this option instead 
+        #Otherwise, please run seed.py after replicating each bug just in case
+
+
+        now = datetime.now(timezone.utc)
+        twenty_three_hours_ago = now - timedelta(hours=23)
+
+        for s in Song.query.all():
+            songs.append({"id": s.id, "title" : s.title})
+
+        for u in User.query.all():
+            listOfUSERIDS.append({"id": u.id, "username" : u.username, "streak" : u.listening_streak})
+            record_listening_event_for_Bug_Replication(user_id=u.id,song_id=(songs[0])["id"],time=twenty_three_hours_ago)
+        
+        list_of_friend_feeds = get_friends_listening_now((listOfUSERIDS[0])["id"])
+        print(list_of_friend_feeds)
+    
+
+
+# Bug one replication
 def testing_listening_streak():
 
     app = create_app()

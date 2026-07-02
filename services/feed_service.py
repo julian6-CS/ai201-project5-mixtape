@@ -28,8 +28,16 @@ def get_friends_listening_now(user_id: str) -> list[dict]:
     user = db.session.get(User, user_id)
     if not user:
         raise ValueError(f"User {user_id} not found")
+    
+    now = datetime.now(timezone.utc)
 
-    cutoff = datetime.now(timezone.utc) - RECENT_THRESHOLD
+    cutoff = now - RECENT_THRESHOLD
+
+    if RECENT_THRESHOLD >= timedelta(hours=24):
+        today = now.replace(hour=0,minute=0,second=0,microsecond=0)
+        cutoff = today - (RECENT_THRESHOLD - timedelta(hours=24))
+    #Interpret the theshold as calendar days instead now 24hts is today, 48 is today and yesterday and so forth
+
     friend_ids = [f.id for f in user.friends]
 
     if not friend_ids:
