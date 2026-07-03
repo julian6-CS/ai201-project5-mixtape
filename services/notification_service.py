@@ -105,6 +105,13 @@ def rate_song(user_id: str, song_id: str, score: int) -> Rating:
         rating = Rating(user_id=user_id, song_id=song_id, score=score)
         db.session.add(rating)
 
+    if song.shared_by != user_id:
+        create_notification(
+            user_id=song.shared_by,
+            notification_type="song_added_to_playlist",
+            body=f"{rater.username} just rated your song with a {score}'.",
+        )
+
     db.session.commit()
 
     return rating

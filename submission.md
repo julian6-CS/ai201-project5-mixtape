@@ -57,26 +57,31 @@ After changing the cutoff calculation, I verified that get_friends_listening_now
 
 --------------------------------------------------------------------------------------------
 
-Bug Analysis: 
+Bug Analysis: Bug 4 "I got notified when a friend added my song to a playlist but not when they rated it" in `notification_service.py` 
 
-Reproduction Steps: 
+Reproduction Steps: To repoduce this, get any song and get the shared by variable within the song object. This will provide a user id which you can quickly query to receive the object holding the friends list. Using one of the friend ids within the friend list, you must create a playlist and add the song you started with into the playlist. This will produce a notification for the user we started with and will be our baseline on how we can expect the notification to look. Then using the same friend id we can rate the same song. We can then request all the notifications belonging to the user we started with and see that the rating notification is missing from our log. A function doing this for you is present in replicating_bugs.py as testing_bug_four.
 
 Navigation strategy: 
+Due to the bugs description, I was able to start analyzing core differences between the playlist addition and the rating workflow that the notification_service.py methods enable. To have a firm understanding on the rating workflow, I analyzed every functions and method used along this process. With this in mind, I started my evaluation within the models.py file to analyze the Rating class to best understand on how the workflow interacts with the class and if there was something predefined which could be the cause of the bug like the UniqueConstraint defined in the class. Keeping in mind that the expected behavior is present in the add_to_playlist workflow I decided to also analyze everything involved with it. Paying special attention to the playlist entries and the playlist object definition to familiarize myself with it and compare it against the rating workflow.
+After this analysis, I came to the conclusion that nothing in the models.py or in the route could possibly be the cause of the behavior described in the bug. Now I was able to narrow my focus solely on the "notification_service.py" file fully understanding the intended flow of data. First, I started analyzing the rate_song function which only gets called in the rating endpoint workflow to see if it ever utilizes the notification functions or objects. Seeing that there was none, I then started to analyze the add_to_playlist function to see if it utilized the notification workflow. After learning that it did, I knew that there was an architectual problem where the function never engages with this behavior when it is expected to. I was fully convinced that this was the cause when I followed the playlist addition workflow while running tests and print statements to see when the notification gets added. Seeing that it was only added after the specific create_notifications call within the if clause, I was convinced that this was what rate_song was missing.
+
 
 Root cause explanation:
+This was an architectual discrepancy where the rate_song function does not call on the specific create_notification functionality after evaluating whether the song was reccomended by anyone. The bug was not caused by the implimentation failing or causing an error, it was caused by this behavior not existing at all. Within rate_song after the rating is added, the function should access the shared_by variable stored in the song variable aquired in the function and if it is not equal to the person rating the song it means that it was reccomended to them. It should then create_notification where the functions adds a notification object to the database tied to the reccomenders user id. The lack of this functionality, which is exactly what add_to_playlist engages with, is the reason why the bug occurs.
 
-Fix description:
+Fix description: Using the same logic present in the add_to_playlist function we can make an if claus where if the songs original reccomender is not the user making the review, we use the create_notification function to create a notification using the id belonging to the songs original reccomender. I would usually add extra functionality to make sure this only triggers if the original reccomender is in their friend list, but since this logic is present in add_to_playlist I deferred to that implimentation or logic instead.
 
 Side-effect check:
+To verify any immediate possible bugs caused by this fix, I evaluated the output from the rate_song function and compared it against the output when the fix wasn't put into place. I also verified if it could possibly cause unintended behavior when the song isn't reccomended by anyone by running the exact scenario with the fix in place and without. Seeing that this fix causes new notifications to be created, I wanted to evalaute whether they were created in the correct way by evaluating each new notification and by calling the get_notifications method to see if it provides the expected result. Afterwards, I marked some of the notifications as read and then evaluated if the functions worked as expected with the new additions. Seeing that nothing else interacts with the notification object or table in the database, I decided to compare the database before and after these notifications were added with the fix implimented. I did this by making a JSON file based on all the entries in the database and comparing every value or variable with the new database, the only difference between the two being the new notification entries in the database and the new rating entries. I felt satisfied with this analysis since I evaluated every workflow or process which would interact with either the notifications or rating object.
 
 
 --------------------------------------------------------------------------------------------
 
-Bug Analysis: 
+Bug Analysis: Bug 5 "The last song in a playlist never shows up" in  `playlist_service.py`
 
-Reproduction Steps: 
+Reproduction Steps: Using a random user id, create a playlist using the function in playlist_service.py and use the return variable to get the id for the created playlist. Then add three songs to the playlist using add_to_playlist and the use get_playlist_songs to request all the songs. You will notice that the last one is missing from the query.
 
-Navigation strategy: 
+Navigation strategy:
 
 Root cause explanation:
 

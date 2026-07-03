@@ -3,6 +3,109 @@ from app import create_app, db
 from models import User, Song, Tag, Playlist, ListeningEvent, Rating, Notification, song_tags, playlist_entries, friendships
 from services.streak_service import record_listening_event , get_streak , update_listening_streak
 from services.feed_service import get_friends_listening_now
+from services.search_service import search_songs, get_song
+from services.notification_service import get_notifications, add_to_playlist, rate_song
+from services.playlist_service import get_user_playlists, create_playlist, get_playlist_songs
+
+#Bug three replication
+
+def testing_bug_five():
+    app = create_app()
+    with app.app_context():
+        listOfUSER = []
+        songs = []
+
+        for s in Song.query.all():
+            songs.append(s)
+
+        for u in User.query.all():
+            listOfUSER.append(u)
+        
+        user = listOfUSER[0]
+        user_id = user[0].id
+        playlist = create_playlist(name="new_playlist", created_by_user_id=user_id)
+        playlist_id = playlist.id 
+
+        add_to_playlist(playlist_id=playlist_id,song_id=songs[2].id,added_by_user_id=user_id)
+        add_to_playlist(playlist_id=playlist_id,song_id=songs[1].id,added_by_user_id=user_id)
+        add_to_playlist(playlist_id=playlist_id,song_id=songs[0].id,added_by_user_id=user_id)
+
+        print(get_playlist_songs(playlist_id=playlist_id))
+
+
+        
+        
+
+
+
+def testing_bug_four():
+    #error
+    app = create_app()
+    with app.app_context():
+
+        
+        listOfUSERIDS = {}
+        songs = []
+        userAfterLoggingListen = []
+
+        for s in Song.query.all():
+            songs.append(s)
+
+        for u in User.query.all():
+            listOfUSERIDS[u.id] = u
+        
+        reccomended_song = songs[2]
+        reccomended_by = reccomended_song.shared_by
+        userWhoReccomended = listOfUSERIDS.get(reccomended_by)
+        friend_ids = [f.id for f in userWhoReccomended.friends]
+        print(friend_ids)
+
+
+        notifications_before_playlist = get_notifications(user_id=userWhoReccomended.id)
+        print(notifications_before_playlist)
+
+        # get the first friend of the user who reccomended, add the song to they shared specifically to cause the notification to appear, log the notification
+        friend_identification = friend_ids[0]
+        friend = listOfUSERIDS.get(friend_identification)
+        friends_playlist = create_playlist(name="new_playlist", created_by_user_id=friend_identification)
+        friend_playlist_id = friends_playlist.id 
+
+        
+        add_to_playlist(playlist_id=friend_playlist_id,song_id=reccomended_song.id,added_by_user_id=friend_identification)
+        add_to_playlist(playlist_id=friend_playlist_id,song_id=songs[1].id,added_by_user_id=friend_identification)
+        add_to_playlist(playlist_id=friend_playlist_id,song_id=songs[0].id,added_by_user_id=friend_identification)
+        print("ADDED SONGS")
+        print(get_playlist_songs(playlist_id=friend_playlist_id))
+        print("ADDED SONGS")
+        print("")
+
+        notifications_after_playlist = get_notifications(user_id=userWhoReccomended.id)
+        print("")
+        print("")
+        print(notifications_after_playlist)
+        print("")
+        print("")
+
+        
+        rate_song( user_id=friend_ids[0],song_id=(reccomended_song.id), score=5)
+        notifications_after_review = get_notifications(user_id=userWhoReccomended.id)
+        print("")
+        print("")
+        print(notifications_after_review)
+        print("")
+        print("")
+
+        if (notifications_after_review == notifications_after_playlist):
+            print("No Notification Due to Friend Rating")
+        
+        print("")
+        print("")
+        print(f"playlist_id:{friend_playlist_id} , added_by: {friend_identification}, song_id: {reccomended_song.id}")
+
+
+
+
+    
 
 
 
@@ -110,5 +213,7 @@ def testing_listening_streak():
 
 
 if __name__ == "__main__":
-    testing_listening_streak()
+    #testing_listening_streak()
+    testing_bug_four()
+    #testing_bug_two()
 

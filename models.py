@@ -32,8 +32,8 @@ playlist_entries = db.Table(
     "playlist_entries",
     db.Column("playlist_id", db.String(36), db.ForeignKey("playlist.id"), primary_key=True),
     db.Column("song_id", db.String(36), db.ForeignKey("song.id"), primary_key=True),
-    db.Column("position", db.Integer, nullable=False),
-    db.Column("added_by", db.String(36), db.ForeignKey("user.id"), nullable=False),
+    db.Column("position", db.Integer, nullable=True),
+    db.Column("added_by", db.String(36), db.ForeignKey("user.id"), nullable=True), #change position and added_by back to nullable=False
     db.Column("added_at", db.DateTime, default=lambda: datetime.now(timezone.utc)),
 )
 
