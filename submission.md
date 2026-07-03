@@ -81,13 +81,15 @@ Bug Analysis: Bug 5 "The last song in a playlist never shows up" in  `playlist_s
 
 Reproduction Steps: Using a random user id, create a playlist using the function in playlist_service.py and use the return variable to get the id for the created playlist. Then add three songs to the playlist using add_to_playlist and the use get_playlist_songs to request all the songs. You will notice that the last one is missing from the query.
 
-Navigation strategy:
+Navigation strategy: First I engaged with the workflow described since it is described as a bug that occurs universally. Replicating these conditions, I added three songs into a playlist that I created to see if the problem involved the addition of songs to the playlist. This was determined after querying all the songs belonging to a playlist within the database, I learned that the songs were all stored correctly and this workflow could not be the cause of this issue. I then steered my focus towards the only other functions which engages with the entries in the playlist other than add_to_playlist, which was get_playlist_songs. Evaluating each line of code, and specifically the database query portion. I realized that when the list of songs was returned there was a "[:-1]" used which commonly means return every element except the last one. To be entirely sure, I ran a print statement after the database query to see if that reported every song in the playlist and it did. 
 
 Root cause explanation:
+Within the get_playlist_songs function, within the return statement it uses the slice functionality unintentionaly. Originally the database query from lines 58-64 produces the right and complete list of songs that reflects the playlist. When the list is being created and the objects are turned into dictionary objects on line 66 it uses a "[:-1]" right next to songs which specifically mean, give me every entry in the songs list with the exception of the last object. The for loop the list of dictionary objects the return line returns is created with the shortened songs list which is then propogated in the return value provided to the user.
 
 Fix description:
+Erase the "[:-1]" after songs on line 66 within the list comprehension statement where every object is turned into an dictionary object within the return statement.
 
 Side-effect check:
-
+To be entirely sure that nothing else was affected, I ran a couple tests and compared the output provided by the get_playlist_songs functions, evaluating that the functions behavior is preserved. The route that utilizes this function is so simple that I do not worry that it could possibly be affected since I already check that the output is complete and expected. I feel comfortable with this semi-short analysis since nothing else usese this functionality and this change only alters how long the list is, nothing else.
 
 # AI Usage
